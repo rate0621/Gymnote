@@ -1,64 +1,42 @@
 //
-//  ContentView.swift
+//  RecordAddSheet.swift
 //  tralog
 //
-//  Created by rate on 2025/12/25.
+//  Created by rate on 2025/12/26.
 //
 
 import SwiftUI
 import CoreData
 
-// 同じメニュー・値でグループ化した記録
-struct GroupedRecord {
-    let key: String
-    let menuName: String
-    let bodyPart: String
-    let inputType: InputType
-    let value1: Double
-    let value2: Double
-    let value3: Int
-    var setCount: Int
-    var latestDate: Date
-}
-
-struct ContentView: View {
+struct RecordAddSheet: View {
     @Environment(\.managedObjectContext) private var viewContext
+    @Environment(\.dismiss) private var dismiss
 
-    // 今日の記録を取得
-    @FetchRequest private var todayRecords: FetchedResults<TrainingRecord>
+    let targetDate: Date
 
-    // 入力状態
     @State private var isShowingMenuSheet = false
-    @State private var isShowingProfileSheet = false
     @State private var selectedBodyPart: BodyPart?
     @State private var selectedMenuItem: TrainingMenuItem?
     @State private var selectedValue1: Double = 20.0
     @State private var selectedValue2: Double = 10.0
     @State private var selectedValue3: Int = 20
 
-    init() {
-        let calendar = Calendar.current
-        let startOfDay = calendar.startOfDay(for: Date())
-        let endOfDay = calendar.date(byAdding: .day, value: 1, to: startOfDay)!
-
-        _todayRecords = FetchRequest(
-            sortDescriptors: [NSSortDescriptor(keyPath: \TrainingRecord.date, ascending: false)],
-            predicate: NSPredicate(format: "date >= %@ AND date < %@", startOfDay as NSDate, endOfDay as NSDate),
-            animation: .default
-        )
-    }
-
     var body: some View {
         NavigationView {
             ScrollView {
                 VStack(spacing: 20) {
-                    // メニュー選択エリア（タップでシート表示）
+                    // 日付表示
+                    Text(dateString(from: targetDate))
+                        .font(.headline)
+                        .foregroundColor(.secondary)
+                        .padding(.top)
+
+                    // メニュー選択エリア
                     Button {
                         isShowingMenuSheet = true
                     } label: {
                         HStack {
                             if let menuItem = selectedMenuItem, let part = selectedBodyPart {
-                                // 選択済み
                                 Text(part.rawValue)
                                     .font(.caption)
                                     .padding(.horizontal, 8)
@@ -69,7 +47,6 @@ struct ContentView: View {
                                     .font(.title2)
                                     .fontWeight(.bold)
                             } else {
-                                // 未選択
                                 Text("メニューを選択")
                                     .font(.title3)
                                     .foregroundColor(.secondary)
@@ -86,13 +63,14 @@ struct ContentView: View {
                     .buttonStyle(.plain)
                     .padding(.horizontal)
 
-                    // 入力Picker（メニューのInputTypeに応じて動的に変化）
+                    // 入力Picker
                     if let menuItem = selectedMenuItem {
                         inputPickerView(for: menuItem.inputType)
 
                         // 登録ボタン
                         Button {
                             saveRecord()
+                            dismiss()
                         } label: {
                             Text("登録")
                                 .font(.headline)
@@ -105,58 +83,15 @@ struct ContentView: View {
                         .padding(.horizontal)
                     }
 
-                    // 今日の記録
-                    if !groupedRecords.isEmpty {
-                        VStack(alignment: .leading, spacing: 12) {
-                            Text("今日の記録")
-                                .font(.headline)
-                                .padding(.horizontal)
-
-                            ForEach(groupedRecords, id: \.key) { group in
-                                HStack {
-                                    VStack(alignment: .leading, spacing: 4) {
-                                        Text(group.menuName)
-                                            .font(.subheadline)
-                                            .fontWeight(.medium)
-                                        Text(group.bodyPart)
-                                            .font(.caption)
-                                            .foregroundColor(.secondary)
-                                    }
-                                    Spacer()
-                                    if group.setCount > 1 {
-                                        Text("\(group.setCount)セット")
-                                            .font(.caption)
-                                            .padding(.horizontal, 6)
-                                            .padding(.vertical, 2)
-                                            .background(Color.blue.opacity(0.2))
-                                            .cornerRadius(4)
-                                    }
-                                    Text(group.inputType.formatRecord(value1: group.value1, value2: group.value2, value3: group.value3))
-                                        .font(.subheadline)
-                                        .foregroundColor(.secondary)
-                                }
-                                .padding()
-                                .background(Color(.systemGray6))
-                                .cornerRadius(8)
-                                .padding(.horizontal)
-                            }
-                        }
-                        .padding(.top, 20)
-                    }
-
                     Spacer(minLength: 50)
                 }
-                .padding(.top)
             }
-            .navigationTitle("Gymnote")
+            .navigationTitle("記録を追加")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
-                ToolbarItem(placement: .navigationBarTrailing) {
-                    Button {
-                        isShowingProfileSheet = true
-                    } label: {
-                        Image(systemName: "person.circle")
-                            .font(.title3)
+                ToolbarItem(placement: .navigationBarLeading) {
+                    Button("キャンセル") {
+                        dismiss()
                     }
                 }
             }
@@ -166,11 +101,7 @@ struct ContentView: View {
                     selectedMenuItem: $selectedMenuItem
                 )
             }
-            .sheet(isPresented: $isShowingProfileSheet) {
-                ProfileEditView()
-            }
             .onChange(of: selectedMenuItem) { _, newItem in
-                // メニュー変更時にデフォルト値をセット
                 if let item = newItem {
                     selectedValue1 = item.inputType.value1Default
                     selectedValue2 = item.inputType.value2Default
@@ -180,18 +111,16 @@ struct ContentView: View {
         }
     }
 
-    // 入力タイプに応じたPicker
     @ViewBuilder
     private func inputPickerView(for inputType: InputType) -> some View {
         HStack(spacing: 0) {
-            // Value1 Picker
             VStack(spacing: 4) {
                 Text(inputType.value1Label)
                     .font(.caption)
                     .foregroundColor(.secondary)
                 Picker(inputType.value1Label, selection: $selectedValue1) {
                     ForEach(inputType.value1Options, id: \.self) { value in
-                        Text(self.formatValue1(value, for: inputType)).tag(value)
+                        Text(formatValue1(value, for: inputType)).tag(value)
                     }
                 }
                 .pickerStyle(.wheel)
@@ -202,7 +131,6 @@ struct ContentView: View {
                     .foregroundColor(.secondary)
             }
 
-            // Value2 Picker（ある場合のみ）
             if inputType.value2Label != nil {
                 VStack(spacing: 4) {
                     Text(inputType.value2Label!)
@@ -210,7 +138,7 @@ struct ContentView: View {
                         .foregroundColor(.secondary)
                     Picker(inputType.value2Label!, selection: $selectedValue2) {
                         ForEach(inputType.value2Options, id: \.self) { value in
-                            Text(self.formatValue2(value, for: inputType)).tag(value)
+                            Text(formatValue2(value, for: inputType)).tag(value)
                         }
                     }
                     .pickerStyle(.wheel)
@@ -222,7 +150,6 @@ struct ContentView: View {
                 }
             }
 
-            // Value3 Picker（ある場合のみ）
             if inputType.value3Label != nil {
                 VStack(spacing: 4) {
                     Text(inputType.value3Label!)
@@ -267,64 +194,36 @@ struct ContentView: View {
         }
     }
 
-    // グループ化された記録（最新順）
-    private var groupedRecords: [GroupedRecord] {
-        var dict: [String: GroupedRecord] = [:]
-        for record in todayRecords {
-            let key = "\(record.menuName ?? "")-\(record.value1)-\(record.value2)-\(record.value3)"
-            let recordDate = record.date ?? Date.distantPast
-            let recordInputType = InputType(rawValue: record.inputType ?? "") ?? .weightReps
-
-            if var existing = dict[key] {
-                existing.setCount += 1
-                if recordDate > existing.latestDate {
-                    existing.latestDate = recordDate
-                }
-                dict[key] = existing
-            } else {
-                dict[key] = GroupedRecord(
-                    key: key,
-                    menuName: record.menuName ?? "",
-                    bodyPart: record.bodyPart ?? "",
-                    inputType: recordInputType,
-                    value1: record.value1,
-                    value2: record.value2,
-                    value3: Int(record.value3),
-                    setCount: 1,
-                    latestDate: recordDate
-                )
-            }
-        }
-        return Array(dict.values).sorted { $0.latestDate > $1.latestDate }
-    }
-
     private func saveRecord() {
         guard let menuItem = selectedMenuItem,
               let part = selectedBodyPart else { return }
 
-        withAnimation {
-            let newRecord = TrainingRecord(context: viewContext)
-            newRecord.id = UUID()
-            newRecord.date = Date()
-            newRecord.bodyPart = part.rawValue
-            newRecord.menuName = menuItem.name
-            newRecord.inputType = menuItem.inputType.rawValue
-            newRecord.value1 = selectedValue1
-            newRecord.value2 = selectedValue2
-            newRecord.value3 = Int16(selectedValue3)
+        let newRecord = TrainingRecord(context: viewContext)
+        newRecord.id = UUID()
+        newRecord.date = targetDate
+        newRecord.bodyPart = part.rawValue
+        newRecord.menuName = menuItem.name
+        newRecord.inputType = menuItem.inputType.rawValue
+        newRecord.value1 = selectedValue1
+        newRecord.value2 = selectedValue2
+        newRecord.value3 = Int16(selectedValue3)
 
-            do {
-                try viewContext.save()
-            } catch {
-                let nsError = error as NSError
-                print("Error saving: \(nsError), \(nsError.userInfo)")
-            }
+        do {
+            try viewContext.save()
+        } catch {
+            print("Error saving: \(error)")
         }
     }
 
+    private func dateString(from date: Date) -> String {
+        let formatter = DateFormatter()
+        formatter.dateFormat = "yyyy年M月d日"
+        formatter.locale = Locale(identifier: "ja_JP")
+        return formatter.string(from: date)
+    }
 }
 
 #Preview {
-    ContentView()
+    RecordAddSheet(targetDate: Date())
         .environment(\.managedObjectContext, PersistenceController.preview.container.viewContext)
 }
