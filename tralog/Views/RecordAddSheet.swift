@@ -21,12 +21,16 @@ struct RecordAddSheet: View {
     @State private var selectedValue2: Double = 10.0
     @State private var selectedValue3: Int = 20
 
+    // エラー通知
+    @State private var showingError = false
+    @State private var errorMessage = ""
+
     var body: some View {
-        NavigationView {
+        NavigationStack {
             ScrollView {
                 VStack(spacing: 20) {
                     // 日付表示
-                    Text(dateString(from: targetDate))
+                    Text(DateFormatters.fullDate.string(from: targetDate))
                         .font(.headline)
                         .foregroundColor(.secondary)
                         .padding(.top)
@@ -65,12 +69,18 @@ struct RecordAddSheet: View {
 
                     // 入力Picker
                     if let menuItem = selectedMenuItem {
-                        inputPickerView(for: menuItem.inputType)
+                        InputPickerView(
+                            inputType: menuItem.inputType,
+                            value1: $selectedValue1,
+                            value2: $selectedValue2,
+                            value3: $selectedValue3
+                        )
 
                         // 登録ボタン
                         Button {
-                            saveRecord()
-                            dismiss()
+                            if saveRecord() {
+                                dismiss()
+                            }
                         } label: {
                             Text("登録")
                                 .font(.headline)
@@ -108,95 +118,18 @@ struct RecordAddSheet: View {
                     selectedValue3 = item.inputType.value3Default
                 }
             }
-        }
-    }
-
-    @ViewBuilder
-    private func inputPickerView(for inputType: InputType) -> some View {
-        HStack(spacing: 0) {
-            VStack(spacing: 4) {
-                Text(inputType.value1Label)
-                    .font(.caption)
-                    .foregroundColor(.secondary)
-                Picker(inputType.value1Label, selection: $selectedValue1) {
-                    ForEach(inputType.value1Options, id: \.self) { value in
-                        Text(formatValue1(value, for: inputType)).tag(value)
-                    }
-                }
-                .pickerStyle(.wheel)
-                .frame(width: 80, height: 120)
-                .clipped()
-                Text(inputType.value1Unit)
-                    .font(.caption)
-                    .foregroundColor(.secondary)
-            }
-
-            if inputType.value2Label != nil {
-                VStack(spacing: 4) {
-                    Text(inputType.value2Label!)
-                        .font(.caption)
-                        .foregroundColor(.secondary)
-                    Picker(inputType.value2Label!, selection: $selectedValue2) {
-                        ForEach(inputType.value2Options, id: \.self) { value in
-                            Text(formatValue2(value, for: inputType)).tag(value)
-                        }
-                    }
-                    .pickerStyle(.wheel)
-                    .frame(width: 80, height: 120)
-                    .clipped()
-                    Text(inputType.value2Unit!)
-                        .font(.caption)
-                        .foregroundColor(.secondary)
-                }
-            }
-
-            if inputType.value3Label != nil {
-                VStack(spacing: 4) {
-                    Text(inputType.value3Label!)
-                        .font(.caption)
-                        .foregroundColor(.secondary)
-                    Picker(inputType.value3Label!, selection: $selectedValue3) {
-                        ForEach(inputType.value3Options, id: \.self) { value in
-                            Text("\(value)").tag(value)
-                        }
-                    }
-                    .pickerStyle(.wheel)
-                    .frame(width: 80, height: 120)
-                    .clipped()
-                    Text(inputType.value3Unit!)
-                        .font(.caption)
-                        .foregroundColor(.secondary)
-                }
+            .alert("エラー", isPresented: $showingError) {
+                Button("OK", role: .cancel) {}
+            } message: {
+                Text(errorMessage)
             }
         }
-        .frame(maxWidth: .infinity)
-        .padding(.vertical, 8)
-        .background(Color(.systemGray6))
-        .cornerRadius(10)
-        .padding(.horizontal)
     }
 
-    private func formatValue1(_ value: Double, for inputType: InputType) -> String {
-        switch inputType {
-        case .weightReps, .inclineSpeedTime, .distanceTime:
-            return String(format: "%.1f", value)
-        case .timeOnly, .repsOnly, .levelTime:
-            return "\(Int(value))"
-        }
-    }
-
-    private func formatValue2(_ value: Double, for inputType: InputType) -> String {
-        switch inputType {
-        case .inclineSpeedTime:
-            return String(format: "%.1f", value)
-        default:
-            return "\(Int(value))"
-        }
-    }
-
-    private func saveRecord() {
+    @discardableResult
+    private func saveRecord() -> Bool {
         guard let menuItem = selectedMenuItem,
-              let part = selectedBodyPart else { return }
+              let part = selectedBodyPart else { return false }
 
         let newRecord = TrainingRecord(context: viewContext)
         newRecord.id = UUID()
@@ -210,16 +143,12 @@ struct RecordAddSheet: View {
 
         do {
             try viewContext.save()
+            return true
         } catch {
-            print("Error saving: \(error)")
+            errorMessage = "記録の保存に失敗しました"
+            showingError = true
+            return false
         }
-    }
-
-    private func dateString(from date: Date) -> String {
-        let formatter = DateFormatter()
-        formatter.dateFormat = "yyyy年M月d日"
-        formatter.locale = Locale(identifier: "ja_JP")
-        return formatter.string(from: date)
     }
 }
 

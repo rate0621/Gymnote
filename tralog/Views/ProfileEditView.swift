@@ -37,8 +37,12 @@ struct ProfileEditView: View {
         Double(weightText) ?? 65.0
     }
 
+    // エラー通知
+    @State private var showingError = false
+    @State private var errorMessage = ""
+
     var body: some View {
-        NavigationView {
+        NavigationStack {
             Form {
                 // 基本情報
                 Section(header: Text("基本情報")) {
@@ -102,6 +106,19 @@ struct ProfileEditView: View {
                                 .foregroundColor(.secondary)
                         }
                     }
+
+                    // 出典リンク
+                    Link(destination: URL(string: "https://kennet.mhlw.go.jp/information/information/food/e-02-001")!) {
+                        HStack {
+                            Text("出典: 厚生労働省")
+                                .font(.caption)
+                                .foregroundColor(.secondary)
+                            Spacer()
+                            Image(systemName: "arrow.up.right.square")
+                                .font(.caption)
+                                .foregroundColor(.blue)
+                        }
+                    }
                 }
 
                 // 目標（複数選択可能）
@@ -140,8 +157,9 @@ struct ProfileEditView: View {
                 }
                 ToolbarItem(placement: .navigationBarTrailing) {
                     Button("保存") {
-                        saveProfile()
-                        dismiss()
+                        if saveProfile() {
+                            dismiss()
+                        }
                     }
                     .fontWeight(.bold)
                     .disabled(selectedGoals.isEmpty)
@@ -149,6 +167,11 @@ struct ProfileEditView: View {
             }
             .onAppear {
                 loadExistingProfile()
+            }
+            .alert("エラー", isPresented: $showingError) {
+                Button("OK", role: .cancel) {}
+            } message: {
+                Text(errorMessage)
             }
         }
     }
@@ -182,7 +205,8 @@ struct ProfileEditView: View {
         }
     }
 
-    private func saveProfile() {
+    @discardableResult
+    private func saveProfile() -> Bool {
         // 既存のプロフィールがあれば更新、なければ新規作成
         let profile = profiles.first ?? UserProfile(context: viewContext)
 
@@ -204,8 +228,11 @@ struct ProfileEditView: View {
 
         do {
             try viewContext.save()
+            return true
         } catch {
-            print("Error saving profile: \(error)")
+            errorMessage = "プロフィールの保存に失敗しました"
+            showingError = true
+            return false
         }
     }
 }

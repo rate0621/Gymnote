@@ -55,7 +55,7 @@ struct HistoryView: View {
     }
 
     var body: some View {
-        NavigationView {
+        NavigationStack {
             ScrollView {
                 VStack(spacing: 16) {
                     // カレンダーヘッダー
@@ -104,7 +104,7 @@ struct HistoryView: View {
 
             Spacer()
 
-            Text(monthYearString(from: displayedMonth))
+            Text(DateFormatters.yearMonth.string(from: displayedMonth))
                 .font(.title2)
                 .fontWeight(.bold)
 
@@ -163,7 +163,6 @@ struct HistoryView: View {
             selectedDate = date
         } label: {
             ZStack {
-                // 選択状態の背景
                 if isSelected {
                     Circle()
                         .fill(Color.blue)
@@ -179,7 +178,6 @@ struct HistoryView: View {
                         .font(.subheadline)
                         .foregroundColor(isSelected ? .white : .primary)
 
-                    // 記録マーカー
                     if hasRecords && !isSelected {
                         Circle()
                             .fill(Color.blue)
@@ -202,20 +200,21 @@ struct HistoryView: View {
 
     // 選択日のセクション
     private var selectedDateSection: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            Text(dateString(from: selectedDate))
+        let grouped = GroupedRecord.group(from: selectedDateRecords)
+
+        return VStack(alignment: .leading, spacing: 12) {
+            Text(DateFormatters.dayRecord.string(from: selectedDate))
                 .font(.headline)
                 .padding(.horizontal)
 
-            if groupedRecords.isEmpty {
+            if grouped.isEmpty {
                 Text("この日の記録はありません")
                     .foregroundColor(.secondary)
                     .frame(maxWidth: .infinity, alignment: .center)
                     .padding(.vertical, 20)
             } else {
-                ForEach(groupedRecords, id: \.key) { group in
+                ForEach(grouped, id: \.key) { group in
                     Button {
-                        // 編集シートを表示（最初のレコードを選択）
                         recordToEdit = selectedDateRecords.first(where: {
                             $0.menuName == group.menuName &&
                             $0.value1 == group.value1 &&
@@ -275,37 +274,6 @@ struct HistoryView: View {
         }
     }
 
-    // グループ化された記録
-    private var groupedRecords: [GroupedRecord] {
-        var dict: [String: GroupedRecord] = [:]
-        for record in selectedDateRecords {
-            let key = "\(record.menuName ?? "")-\(record.value1)-\(record.value2)-\(record.value3)"
-            let recordDate = record.date ?? Date.distantPast
-            let recordInputType = InputType(rawValue: record.inputType ?? "") ?? .weightReps
-
-            if var existing = dict[key] {
-                existing.setCount += 1
-                if recordDate > existing.latestDate {
-                    existing.latestDate = recordDate
-                }
-                dict[key] = existing
-            } else {
-                dict[key] = GroupedRecord(
-                    key: key,
-                    menuName: record.menuName ?? "",
-                    bodyPart: record.bodyPart ?? "",
-                    inputType: recordInputType,
-                    value1: record.value1,
-                    value2: record.value2,
-                    value3: Int(record.value3),
-                    setCount: 1,
-                    latestDate: recordDate
-                )
-            }
-        }
-        return Array(dict.values).sorted { $0.latestDate > $1.latestDate }
-    }
-
     // 記録がある日のセット
     private var datesWithRecords: Set<Date> {
         Set(monthRecords.compactMap { record in
@@ -360,21 +328,6 @@ struct HistoryView: View {
             startOfMonth as NSDate,
             endOfMonth as NSDate
         )
-    }
-
-    // 日付フォーマット
-    private func monthYearString(from date: Date) -> String {
-        let formatter = DateFormatter()
-        formatter.dateFormat = "yyyy年M月"
-        formatter.locale = Locale(identifier: "ja_JP")
-        return formatter.string(from: date)
-    }
-
-    private func dateString(from date: Date) -> String {
-        let formatter = DateFormatter()
-        formatter.dateFormat = "M月d日の記録"
-        formatter.locale = Locale(identifier: "ja_JP")
-        return formatter.string(from: date)
     }
 }
 

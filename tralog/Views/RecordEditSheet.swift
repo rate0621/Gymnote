@@ -19,17 +19,21 @@ struct RecordEditSheet: View {
     @State private var selectedValue3: Int = 20
     @State private var showingDeleteConfirm = false
 
+    // エラー通知
+    @State private var showingError = false
+    @State private var errorMessage = ""
+
     private var inputType: InputType {
         InputType(rawValue: record.inputType ?? "") ?? .weightReps
     }
 
     var body: some View {
-        NavigationView {
+        NavigationStack {
             ScrollView {
                 VStack(spacing: 20) {
                     // 日付とメニュー表示
                     VStack(alignment: .leading, spacing: 8) {
-                        Text(dateString(from: record.date ?? Date()))
+                        Text(DateFormatters.fullDate.string(from: record.date ?? Date()))
                             .font(.caption)
                             .foregroundColor(.secondary)
 
@@ -52,12 +56,18 @@ struct RecordEditSheet: View {
                     .padding(.horizontal)
 
                     // 入力Picker
-                    inputPickerView(for: inputType)
+                    InputPickerView(
+                        inputType: inputType,
+                        value1: $selectedValue1,
+                        value2: $selectedValue2,
+                        value3: $selectedValue3
+                    )
 
                     // 保存ボタン
                     Button {
-                        saveChanges()
-                        dismiss()
+                        if saveChanges() {
+                            dismiss()
+                        }
                     } label: {
                         Text("保存")
                             .font(.headline)
@@ -98,15 +108,20 @@ struct RecordEditSheet: View {
             }
             .alert("削除の確認", isPresented: $showingDeleteConfirm) {
                 Button("削除", role: .destructive) {
-                    deleteRecord()
-                    dismiss()
+                    if deleteRecord() {
+                        dismiss()
+                    }
                 }
                 Button("キャンセル", role: .cancel) {}
             } message: {
                 Text("この記録を削除してもよろしいですか？")
             }
+            .alert("エラー", isPresented: $showingError) {
+                Button("OK", role: .cancel) {}
+            } message: {
+                Text(errorMessage)
+            }
             .onAppear {
-                // 既存の値を読み込み
                 selectedValue1 = record.value1
                 selectedValue2 = record.value2
                 selectedValue3 = Int(record.value3)
@@ -114,116 +129,34 @@ struct RecordEditSheet: View {
         }
     }
 
-    @ViewBuilder
-    private func inputPickerView(for inputType: InputType) -> some View {
-        HStack(spacing: 0) {
-            VStack(spacing: 4) {
-                Text(inputType.value1Label)
-                    .font(.caption)
-                    .foregroundColor(.secondary)
-                Picker(inputType.value1Label, selection: $selectedValue1) {
-                    ForEach(inputType.value1Options, id: \.self) { value in
-                        Text(formatValue1(value, for: inputType)).tag(value)
-                    }
-                }
-                .pickerStyle(.wheel)
-                .frame(width: 80, height: 120)
-                .clipped()
-                Text(inputType.value1Unit)
-                    .font(.caption)
-                    .foregroundColor(.secondary)
-            }
-
-            if inputType.value2Label != nil {
-                VStack(spacing: 4) {
-                    Text(inputType.value2Label!)
-                        .font(.caption)
-                        .foregroundColor(.secondary)
-                    Picker(inputType.value2Label!, selection: $selectedValue2) {
-                        ForEach(inputType.value2Options, id: \.self) { value in
-                            Text(formatValue2(value, for: inputType)).tag(value)
-                        }
-                    }
-                    .pickerStyle(.wheel)
-                    .frame(width: 80, height: 120)
-                    .clipped()
-                    Text(inputType.value2Unit!)
-                        .font(.caption)
-                        .foregroundColor(.secondary)
-                }
-            }
-
-            if inputType.value3Label != nil {
-                VStack(spacing: 4) {
-                    Text(inputType.value3Label!)
-                        .font(.caption)
-                        .foregroundColor(.secondary)
-                    Picker(inputType.value3Label!, selection: $selectedValue3) {
-                        ForEach(inputType.value3Options, id: \.self) { value in
-                            Text("\(value)").tag(value)
-                        }
-                    }
-                    .pickerStyle(.wheel)
-                    .frame(width: 80, height: 120)
-                    .clipped()
-                    Text(inputType.value3Unit!)
-                        .font(.caption)
-                        .foregroundColor(.secondary)
-                }
-            }
-        }
-        .frame(maxWidth: .infinity)
-        .padding(.vertical, 8)
-        .background(Color(.systemGray6))
-        .cornerRadius(10)
-        .padding(.horizontal)
-    }
-
-    private func formatValue1(_ value: Double, for inputType: InputType) -> String {
-        switch inputType {
-        case .weightReps, .inclineSpeedTime, .distanceTime:
-            return String(format: "%.1f", value)
-        case .timeOnly, .repsOnly, .levelTime:
-            return "\(Int(value))"
-        }
-    }
-
-    private func formatValue2(_ value: Double, for inputType: InputType) -> String {
-        switch inputType {
-        case .inclineSpeedTime:
-            return String(format: "%.1f", value)
-        default:
-            return "\(Int(value))"
-        }
-    }
-
-    private func saveChanges() {
+    @discardableResult
+    private func saveChanges() -> Bool {
         record.value1 = selectedValue1
         record.value2 = selectedValue2
         record.value3 = Int16(selectedValue3)
 
         do {
             try viewContext.save()
+            return true
         } catch {
-            print("Error saving: \(error)")
+            errorMessage = "記録の保存に失敗しました"
+            showingError = true
+            return false
         }
     }
 
-    private func deleteRecord() {
+    @discardableResult
+    private func deleteRecord() -> Bool {
         viewContext.delete(record)
 
         do {
             try viewContext.save()
+            return true
         } catch {
-            print("Error deleting: \(error)")
+            errorMessage = "記録の削除に失敗しました"
+            showingError = true
+            return false
         }
-    }
-
-    private func dateString(from date: Date) -> String {
-        let formatter = DateFormatter()
-        formatter.dateFormat = "yyyy年M月d日"
-        formatter.locale = Locale(identifier: "ja_JP")
-        return formatter.string(from: date)
     }
 }
 

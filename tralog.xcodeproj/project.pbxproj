@@ -6,8 +6,19 @@
 	objectVersion = 77;
 	objects = {
 
+/* Begin PBXContainerItemProxy section */
+		AABB00072EFD34A300380F83 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 5F8731002EFD34A100380F83 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 5F8731072EFD34A100380F83;
+			remoteInfo = tralog;
+		};
+/* End PBXContainerItemProxy section */
+
 /* Begin PBXFileReference section */
 		5F8731082EFD34A100380F83 /* tralog.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = tralog.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		AABB00012EFD34A300380F83 /* tralogTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = tralogTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
@@ -16,10 +27,22 @@
 			path = tralog;
 			sourceTree = "<group>";
 		};
+		AABB00022EFD34A300380F83 /* tralogTests */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			path = tralogTests;
+			sourceTree = "<group>";
+		};
 /* End PBXFileSystemSynchronizedRootGroup section */
 
 /* Begin PBXFrameworksBuildPhase section */
 		5F8731052EFD34A100380F83 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		AABB00042EFD34A300380F83 /* Frameworks */ = {
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
@@ -33,6 +56,7 @@
 			isa = PBXGroup;
 			children = (
 				5F87310A2EFD34A100380F83 /* tralog */,
+				AABB00022EFD34A300380F83 /* tralogTests */,
 				5F8731092EFD34A100380F83 /* Products */,
 			);
 			sourceTree = "<group>";
@@ -41,6 +65,7 @@
 			isa = PBXGroup;
 			children = (
 				5F8731082EFD34A100380F83 /* tralog.app */,
+				AABB00012EFD34A300380F83 /* tralogTests.xctest */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -70,6 +95,29 @@
 			productReference = 5F8731082EFD34A100380F83 /* tralog.app */;
 			productType = "com.apple.product-type.application";
 		};
+		AABB00062EFD34A300380F83 /* tralogTests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = AABB000B2EFD34A300380F83 /* Build configuration list for PBXNativeTarget "tralogTests" */;
+			buildPhases = (
+				AABB00032EFD34A300380F83 /* Sources */,
+				AABB00042EFD34A300380F83 /* Frameworks */,
+				AABB00052EFD34A300380F83 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				AABB00082EFD34A300380F83 /* PBXTargetDependency */,
+			);
+			fileSystemSynchronizedGroups = (
+				AABB00022EFD34A300380F83 /* tralogTests */,
+			);
+			name = tralogTests;
+			packageProductDependencies = (
+			);
+			productName = tralogTests;
+			productReference = AABB00012EFD34A300380F83 /* tralogTests.xctest */;
+			productType = "com.apple.product-type.bundle.unit-test";
+		};
 /* End PBXNativeTarget section */
 
 /* Begin PBXProject section */
@@ -82,6 +130,10 @@
 				TargetAttributes = {
 					5F8731072EFD34A100380F83 = {
 						CreatedOnToolsVersion = 26.1.1;
+					};
+					AABB00062EFD34A300380F83 = {
+						CreatedOnToolsVersion = 26.1.1;
+						TestTargetID = 5F8731072EFD34A100380F83;
 					};
 				};
 			};
@@ -100,12 +152,20 @@
 			projectRoot = "";
 			targets = (
 				5F8731072EFD34A100380F83 /* tralog */,
+				AABB00062EFD34A300380F83 /* tralogTests */,
 			);
 		};
 /* End PBXProject section */
 
 /* Begin PBXResourcesBuildPhase section */
 		5F8731062EFD34A100380F83 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		AABB00052EFD34A300380F83 /* Resources */ = {
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
@@ -122,7 +182,22 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		AABB00032EFD34A300380F83 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXSourcesBuildPhase section */
+
+/* Begin PBXTargetDependency section */
+		AABB00082EFD34A300380F83 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 5F8731072EFD34A100380F83 /* tralog */;
+			targetProxy = AABB00072EFD34A300380F83 /* PBXContainerItemProxy */;
+		};
+/* End PBXTargetDependency section */
 
 /* Begin XCBuildConfiguration section */
 		5F8731162EFD34A200380F83 /* Debug */ = {
@@ -268,7 +343,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 1.0;
+				MARKETING_VERSION = 1.1;
 				PRODUCT_BUNDLE_IDENTIFIER = com.chatrate.tralog;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				STRING_CATALOG_GENERATE_SYMBOLS = YES;
@@ -303,7 +378,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 1.0;
+				MARKETING_VERSION = 1.1;
 				PRODUCT_BUNDLE_IDENTIFIER = com.chatrate.tralog;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				STRING_CATALOG_GENERATE_SYMBOLS = YES;
@@ -313,6 +388,50 @@
 				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
 				SWIFT_VERSION = 5.0;
 				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Release;
+		};
+		AABB00092EFD34A300380F83 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = AT7UY78YSF;
+				GENERATE_INFOPLIST_FILE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 18.6;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.chatrate.tralogTests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor;
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/tralog.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/tralog";
+			};
+			name = Debug;
+		};
+		AABB000A2EFD34A300380F83 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = AT7UY78YSF;
+				GENERATE_INFOPLIST_FILE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 18.6;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.chatrate.tralogTests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor;
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/tralog.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/tralog";
 			};
 			name = Release;
 		};
@@ -333,6 +452,15 @@
 			buildConfigurations = (
 				5F8731192EFD34A200380F83 /* Debug */,
 				5F87311A2EFD34A200380F83 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		AABB000B2EFD34A300380F83 /* Build configuration list for PBXNativeTarget "tralogTests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				AABB00092EFD34A300380F83 /* Debug */,
+				AABB000A2EFD34A300380F83 /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;

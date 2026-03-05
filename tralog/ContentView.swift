@@ -8,19 +8,6 @@
 import SwiftUI
 import CoreData
 
-// 同じメニュー・値でグループ化した記録
-struct GroupedRecord {
-    let key: String
-    let menuName: String
-    let bodyPart: String
-    let inputType: InputType
-    let value1: Double
-    let value2: Double
-    let value3: Int
-    var setCount: Int
-    var latestDate: Date
-}
-
 struct ContentView: View {
     @Environment(\.managedObjectContext) private var viewContext
 
@@ -36,6 +23,13 @@ struct ContentView: View {
     @State private var selectedValue2: Double = 10.0
     @State private var selectedValue3: Int = 20
 
+    // 記録からの復元中フラグ（onChangeでデフォルト値に上書きされないようにする）
+    @State private var isRestoringFromRecord = false
+
+    // エラー通知
+    @State private var showingError = false
+    @State private var errorMessage = ""
+
     init() {
         let calendar = Calendar.current
         let startOfDay = calendar.startOfDay(for: Date())
@@ -49,7 +43,7 @@ struct ContentView: View {
     }
 
     var body: some View {
-        NavigationView {
+        NavigationStack {
             ScrollView {
                 VStack(spacing: 20) {
                     // メニュー選択エリア（タップでシート表示）
@@ -58,7 +52,6 @@ struct ContentView: View {
                     } label: {
                         HStack {
                             if let menuItem = selectedMenuItem, let part = selectedBodyPart {
-                                // 選択済み
                                 Text(part.rawValue)
                                     .font(.caption)
                                     .padding(.horizontal, 8)
@@ -69,7 +62,6 @@ struct ContentView: View {
                                     .font(.title2)
                                     .fontWeight(.bold)
                             } else {
-                                // 未選択
                                 Text("メニューを選択")
                                     .font(.title3)
                                     .foregroundColor(.secondary)
@@ -88,7 +80,12 @@ struct ContentView: View {
 
                     // 入力Picker（メニューのInputTypeに応じて動的に変化）
                     if let menuItem = selectedMenuItem {
-                        inputPickerView(for: menuItem.inputType)
+                        InputPickerView(
+                            inputType: menuItem.inputType,
+                            value1: $selectedValue1,
+                            value2: $selectedValue2,
+                            value3: $selectedValue3
+                        )
 
                         // 登録ボタン
                         Button {
@@ -106,38 +103,45 @@ struct ContentView: View {
                     }
 
                     // 今日の記録
-                    if !groupedRecords.isEmpty {
+                    let grouped = GroupedRecord.group(from: todayRecords)
+                    if !grouped.isEmpty {
                         VStack(alignment: .leading, spacing: 12) {
                             Text("今日の記録")
                                 .font(.headline)
                                 .padding(.horizontal)
 
-                            ForEach(groupedRecords, id: \.key) { group in
-                                HStack {
-                                    VStack(alignment: .leading, spacing: 4) {
-                                        Text(group.menuName)
+                            ForEach(grouped, id: \.key) { group in
+                                Button {
+                                    selectFromRecord(group)
+                                } label: {
+                                    HStack {
+                                        VStack(alignment: .leading, spacing: 4) {
+                                            Text(group.menuName)
+                                                .font(.subheadline)
+                                                .fontWeight(.medium)
+                                                .foregroundColor(.primary)
+                                            Text(group.bodyPart)
+                                                .font(.caption)
+                                                .foregroundColor(.secondary)
+                                        }
+                                        Spacer()
+                                        if group.setCount > 1 {
+                                            Text("\(group.setCount)セット")
+                                                .font(.caption)
+                                                .padding(.horizontal, 6)
+                                                .padding(.vertical, 2)
+                                                .background(Color.blue.opacity(0.2))
+                                                .cornerRadius(4)
+                                        }
+                                        Text(group.inputType.formatRecord(value1: group.value1, value2: group.value2, value3: group.value3))
                                             .font(.subheadline)
-                                            .fontWeight(.medium)
-                                        Text(group.bodyPart)
-                                            .font(.caption)
                                             .foregroundColor(.secondary)
                                     }
-                                    Spacer()
-                                    if group.setCount > 1 {
-                                        Text("\(group.setCount)セット")
-                                            .font(.caption)
-                                            .padding(.horizontal, 6)
-                                            .padding(.vertical, 2)
-                                            .background(Color.blue.opacity(0.2))
-                                            .cornerRadius(4)
-                                    }
-                                    Text(group.inputType.formatRecord(value1: group.value1, value2: group.value2, value3: group.value3))
-                                        .font(.subheadline)
-                                        .foregroundColor(.secondary)
+                                    .padding()
+                                    .background(Color(.systemGray6))
+                                    .cornerRadius(8)
                                 }
-                                .padding()
-                                .background(Color(.systemGray6))
-                                .cornerRadius(8)
+                                .buttonStyle(.plain)
                                 .padding(.horizontal)
                             }
                         }
@@ -170,132 +174,39 @@ struct ContentView: View {
                 ProfileEditView()
             }
             .onChange(of: selectedMenuItem) { _, newItem in
-                // メニュー変更時にデフォルト値をセット
+                if isRestoringFromRecord {
+                    isRestoringFromRecord = false
+                    return
+                }
                 if let item = newItem {
                     selectedValue1 = item.inputType.value1Default
                     selectedValue2 = item.inputType.value2Default
                     selectedValue3 = item.inputType.value3Default
                 }
             }
+            .alert("エラー", isPresented: $showingError) {
+                Button("OK", role: .cancel) {}
+            } message: {
+                Text(errorMessage)
+            }
         }
     }
 
-    // 入力タイプに応じたPicker
-    @ViewBuilder
-    private func inputPickerView(for inputType: InputType) -> some View {
-        HStack(spacing: 0) {
-            // Value1 Picker
-            VStack(spacing: 4) {
-                Text(inputType.value1Label)
-                    .font(.caption)
-                    .foregroundColor(.secondary)
-                Picker(inputType.value1Label, selection: $selectedValue1) {
-                    ForEach(inputType.value1Options, id: \.self) { value in
-                        Text(self.formatValue1(value, for: inputType)).tag(value)
-                    }
-                }
-                .pickerStyle(.wheel)
-                .frame(width: 80, height: 120)
-                .clipped()
-                Text(inputType.value1Unit)
-                    .font(.caption)
-                    .foregroundColor(.secondary)
-            }
+    /// 記録からメニューと値を復元する
+    private func selectFromRecord(_ group: GroupedRecord) {
+        // 部位を特定
+        guard let bodyPart = BodyPart.allCases.first(where: { $0.rawValue == group.bodyPart }) else { return }
 
-            // Value2 Picker（ある場合のみ）
-            if inputType.value2Label != nil {
-                VStack(spacing: 4) {
-                    Text(inputType.value2Label!)
-                        .font(.caption)
-                        .foregroundColor(.secondary)
-                    Picker(inputType.value2Label!, selection: $selectedValue2) {
-                        ForEach(inputType.value2Options, id: \.self) { value in
-                            Text(self.formatValue2(value, for: inputType)).tag(value)
-                        }
-                    }
-                    .pickerStyle(.wheel)
-                    .frame(width: 80, height: 120)
-                    .clipped()
-                    Text(inputType.value2Unit!)
-                        .font(.caption)
-                        .foregroundColor(.secondary)
-                }
-            }
+        // メニューを特定
+        guard let menuItem = bodyPart.menus.first(where: { $0.name == group.menuName }) else { return }
 
-            // Value3 Picker（ある場合のみ）
-            if inputType.value3Label != nil {
-                VStack(spacing: 4) {
-                    Text(inputType.value3Label!)
-                        .font(.caption)
-                        .foregroundColor(.secondary)
-                    Picker(inputType.value3Label!, selection: $selectedValue3) {
-                        ForEach(inputType.value3Options, id: \.self) { value in
-                            Text("\(value)").tag(value)
-                        }
-                    }
-                    .pickerStyle(.wheel)
-                    .frame(width: 80, height: 120)
-                    .clipped()
-                    Text(inputType.value3Unit!)
-                        .font(.caption)
-                        .foregroundColor(.secondary)
-                }
-            }
-        }
-        .frame(maxWidth: .infinity)
-        .padding(.vertical, 8)
-        .background(Color(.systemGray6))
-        .cornerRadius(10)
-        .padding(.horizontal)
-    }
-
-    private func formatValue1(_ value: Double, for inputType: InputType) -> String {
-        switch inputType {
-        case .weightReps, .inclineSpeedTime, .distanceTime:
-            return String(format: "%.1f", value)
-        case .timeOnly, .repsOnly, .levelTime:
-            return "\(Int(value))"
-        }
-    }
-
-    private func formatValue2(_ value: Double, for inputType: InputType) -> String {
-        switch inputType {
-        case .inclineSpeedTime:
-            return String(format: "%.1f", value)
-        default:
-            return "\(Int(value))"
-        }
-    }
-
-    // グループ化された記録（最新順）
-    private var groupedRecords: [GroupedRecord] {
-        var dict: [String: GroupedRecord] = [:]
-        for record in todayRecords {
-            let key = "\(record.menuName ?? "")-\(record.value1)-\(record.value2)-\(record.value3)"
-            let recordDate = record.date ?? Date.distantPast
-            let recordInputType = InputType(rawValue: record.inputType ?? "") ?? .weightReps
-
-            if var existing = dict[key] {
-                existing.setCount += 1
-                if recordDate > existing.latestDate {
-                    existing.latestDate = recordDate
-                }
-                dict[key] = existing
-            } else {
-                dict[key] = GroupedRecord(
-                    key: key,
-                    menuName: record.menuName ?? "",
-                    bodyPart: record.bodyPart ?? "",
-                    inputType: recordInputType,
-                    value1: record.value1,
-                    value2: record.value2,
-                    value3: Int(record.value3),
-                    setCount: 1,
-                    latestDate: recordDate
-                )
-            }
-        }
-        return Array(dict.values).sorted { $0.latestDate > $1.latestDate }
+        // 値を先にセット（onChangeでデフォルト値に上書きされないようにフラグを立てる）
+        isRestoringFromRecord = true
+        selectedValue1 = group.value1
+        selectedValue2 = group.value2
+        selectedValue3 = group.value3
+        selectedBodyPart = bodyPart
+        selectedMenuItem = menuItem
     }
 
     private func saveRecord() {
@@ -316,8 +227,8 @@ struct ContentView: View {
             do {
                 try viewContext.save()
             } catch {
-                let nsError = error as NSError
-                print("Error saving: \(nsError), \(nsError.userInfo)")
+                errorMessage = "記録の保存に失敗しました"
+                showingError = true
             }
         }
     }

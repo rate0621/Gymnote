@@ -120,7 +120,7 @@ enum InputType: String {
 
     var value1Default: Double {
         switch self {
-        case .weightReps: return 20.0
+        case .weightReps: return 10.0
         case .timeOnly: return 30.0
         case .repsOnly: return 10.0
         case .inclineSpeedTime: return 1.0
@@ -131,7 +131,7 @@ enum InputType: String {
 
     var value2Default: Double {
         switch self {
-        case .weightReps: return 10.0
+        case .weightReps: return 15.0
         case .timeOnly, .repsOnly: return 0.0
         case .inclineSpeedTime: return 8.0
         case .levelTime: return 20.0
@@ -161,6 +161,27 @@ enum InputType: String {
             return "Lv\(Int(value1)) / \(Int(value2))分"
         case .distanceTime:
             return String(format: "%.1fkm / %d分", value1, Int(value2))
+        }
+    }
+}
+
+// Picker表示用フォーマット
+extension InputType {
+    func formatPickerValue1(_ value: Double) -> String {
+        switch self {
+        case .weightReps, .inclineSpeedTime, .distanceTime:
+            return String(format: "%.1f", value)
+        case .timeOnly, .repsOnly, .levelTime:
+            return "\(Int(value))"
+        }
+    }
+
+    func formatPickerValue2(_ value: Double) -> String {
+        switch self {
+        case .inclineSpeedTime:
+            return String(format: "%.1f", value)
+        default:
+            return "\(Int(value))"
         }
     }
 }
