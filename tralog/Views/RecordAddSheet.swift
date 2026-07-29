@@ -113,9 +113,7 @@ struct RecordAddSheet: View {
             }
             .onChange(of: selectedMenuItem) { _, newItem in
                 if let item = newItem {
-                    selectedValue1 = item.inputType.value1Default
-                    selectedValue2 = item.inputType.value2Default
-                    selectedValue3 = item.inputType.value3Default
+                    applyPreset(for: item)
                 }
             }
             .alert("エラー", isPresented: $showingError) {
@@ -124,6 +122,14 @@ struct RecordAddSheet: View {
                 Text(errorMessage)
             }
         }
+    }
+
+    /// 選択した種目の初期値をPickerへ反映する
+    private func applyPreset(for item: TrainingMenuItem) {
+        let preset = TrainingRecordQueries.presetValues(for: item, in: viewContext)
+        selectedValue1 = preset.value1
+        selectedValue2 = preset.value2
+        selectedValue3 = preset.value3
     }
 
     @discardableResult

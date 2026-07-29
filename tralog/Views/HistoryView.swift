@@ -7,17 +7,26 @@
 
 import SwiftUI
 import CoreData
+import Combine
 
 struct HistoryView: View {
     @Environment(\.managedObjectContext) private var viewContext
+    @Environment(\.scenePhase) private var scenePhase
 
     // カレンダー状態
     @State private var displayedMonth: Date = Date()
     @State private var selectedDate: Date = Date()
 
+    // 現在表示している日（日付跨ぎの検知用）
+    @State private var displayedDay: Date = Calendar.current.startOfDay(for: Date())
+
     // シート表示
     @State private var isShowingAddSheet = false
     @State private var recordToEdit: TrainingRecord?
+    @State private var isShowingMemoSheet = false
+
+    // 選択日のメモ
+    @State private var selectedDateMemo: DailyMemo?
 
     // 選択日の記録を取得
     @FetchRequest private var selectedDateRecords: FetchedResults<TrainingRecord>
@@ -82,11 +91,28 @@ struct HistoryView: View {
             .sheet(item: $recordToEdit) { record in
                 RecordEditSheet(record: record)
             }
+            .sheet(isPresented: $isShowingMemoSheet, onDismiss: reloadSelectedDateMemo) {
+                DailyMemoSheet(date: selectedDate)
+            }
+            .onAppear {
+                reloadSelectedDateMemo()
+            }
             .onChange(of: selectedDate) { _, newDate in
                 updateSelectedDatePredicate(for: newDate)
+                reloadSelectedDateMemo()
             }
             .onChange(of: displayedMonth) { _, newMonth in
                 updateMonthPredicate(for: newMonth)
+            }
+            .onChange(of: scenePhase) { _, newPhase in
+                // バックグラウンドで日を跨いだ場合に復帰時点で作り直す
+                if newPhase == .active {
+                    refreshIfDayChanged()
+                }
+            }
+            .onReceive(NotificationCenter.default.publisher(for: .NSCalendarDayChanged).receive(on: RunLoop.main)) { _ in
+                // フォアグラウンドのまま0時を跨いだ場合（通知はバックグラウンドスレッドで届く）
+                refreshIfDayChanged()
             }
         }
     }
@@ -200,12 +226,15 @@ struct HistoryView: View {
 
     // 選択日のセクション
     private var selectedDateSection: some View {
-        let grouped = GroupedRecord.group(from: selectedDateRecords)
+        let grouped = MenuGroupedRecord.group(from: selectedDateRecords)
 
         return VStack(alignment: .leading, spacing: 12) {
             Text(DateFormatters.dayRecord.string(from: selectedDate))
                 .font(.headline)
                 .padding(.horizontal)
+
+            // その日のメモ
+            memoCard
 
             if grouped.isEmpty {
                 Text("この日の記録はありません")
@@ -213,44 +242,8 @@ struct HistoryView: View {
                     .frame(maxWidth: .infinity, alignment: .center)
                     .padding(.vertical, 20)
             } else {
-                ForEach(grouped, id: \.key) { group in
-                    Button {
-                        recordToEdit = selectedDateRecords.first(where: {
-                            $0.menuName == group.menuName &&
-                            $0.value1 == group.value1 &&
-                            $0.value2 == group.value2 &&
-                            $0.value3 == group.value3
-                        })
-                    } label: {
-                        HStack {
-                            VStack(alignment: .leading, spacing: 4) {
-                                Text(group.menuName)
-                                    .font(.subheadline)
-                                    .fontWeight(.medium)
-                                    .foregroundColor(.primary)
-                                Text(group.bodyPart)
-                                    .font(.caption)
-                                    .foregroundColor(.secondary)
-                            }
-                            Spacer()
-                            if group.setCount > 1 {
-                                Text("\(group.setCount)セット")
-                                    .font(.caption)
-                                    .padding(.horizontal, 6)
-                                    .padding(.vertical, 2)
-                                    .background(Color.blue.opacity(0.2))
-                                    .cornerRadius(4)
-                            }
-                            Text(group.inputType.formatRecord(value1: group.value1, value2: group.value2, value3: group.value3))
-                                .font(.subheadline)
-                                .foregroundColor(.secondary)
-                        }
-                        .padding()
-                        .background(Color(.systemGray6))
-                        .cornerRadius(8)
-                    }
-                    .buttonStyle(.plain)
-                    .padding(.horizontal)
+                ForEach(grouped) { group in
+                    recordCard(for: group)
                 }
             }
 
@@ -272,6 +265,104 @@ struct HistoryView: View {
             .padding(.horizontal)
             .padding(.bottom, 20)
         }
+    }
+
+    // メニュー1件分のカード（ヘッダー＋値行。値行タップで編集シート）
+    private func recordCard(for group: MenuGroupedRecord) -> some View {
+        VStack(alignment: .leading, spacing: 10) {
+            // ヘッダー（メニュー名 + 部位）
+            VStack(alignment: .leading, spacing: 2) {
+                Text(group.menuName)
+                    .font(.subheadline)
+                    .fontWeight(.medium)
+                    .foregroundColor(.primary)
+                Text(group.bodyPart)
+                    .font(.caption)
+                    .foregroundColor(.secondary)
+            }
+
+            // 値行（実施順）
+            ForEach(group.lines, id: \.key) { line in
+                Button {
+                    recordToEdit = line.records.first
+                } label: {
+                    HStack(spacing: 8) {
+                        Text(line.inputType.formatRecord(value1: line.value1, value2: line.value2, value3: line.value3))
+                            .font(.subheadline)
+                            .foregroundColor(.primary)
+                        if line.setCount > 1 {
+                            Text("×\(line.setCount)セット")
+                                .font(.caption)
+                                .padding(.horizontal, 6)
+                                .padding(.vertical, 2)
+                                .background(Color.blue.opacity(0.2))
+                                .cornerRadius(4)
+                        }
+                        Spacer()
+                        Image(systemName: "chevron.right")
+                            .font(.caption)
+                            .foregroundColor(.secondary)
+                    }
+                    .contentShape(Rectangle())
+                }
+                .buttonStyle(.plain)
+            }
+        }
+        .padding()
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(Color(.systemGray6))
+        .cornerRadius(8)
+        .padding(.horizontal)
+    }
+
+    // 選択日のメモカード（タップで編集）
+    @ViewBuilder
+    private var memoCard: some View {
+        if let text = selectedDateMemo?.memo, !text.isEmpty {
+            Button {
+                isShowingMemoSheet = true
+            } label: {
+                VStack(alignment: .leading, spacing: 6) {
+                    HStack {
+                        Image(systemName: "note.text")
+                        Text("メモ")
+                            .font(.caption)
+                        Spacer()
+                        Image(systemName: "pencil")
+                            .font(.caption)
+                    }
+                    .foregroundColor(.secondary)
+
+                    Text(text)
+                        .font(.subheadline)
+                        .foregroundColor(.primary)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                }
+                .padding()
+                .background(Color(.systemGray6))
+                .cornerRadius(8)
+            }
+            .buttonStyle(.plain)
+            .padding(.horizontal)
+        }
+    }
+
+    // 日付が変わっていたら選択日と表示月を今日基準に戻す
+    private func refreshIfDayChanged() {
+        let today = calendar.startOfDay(for: Date())
+        guard today != displayedDay else { return }
+
+        displayedDay = today
+
+        // selectedDate / displayedMonth のonChangeがpredicate更新とメモ再取得を担う
+        let now = Date()
+        selectedDate = now
+        displayedMonth = now
+    }
+
+    // 選択日のメモを取得し直す
+    private func reloadSelectedDateMemo() {
+        selectedDateMemo = TrainingRecordQueries.memo(for: selectedDate, in: viewContext)
     }
 
     // 記録がある日のセット

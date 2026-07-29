@@ -191,6 +191,13 @@ struct TrainingMenuItem: Identifiable, Equatable {
     let id = UUID()
     let name: String
     let inputType: InputType
+    // 種目ごとのvalue1デフォルト値（未指定ならInputTypeのデフォルトを使う）
+    var defaultValue1: Double? = nil
+
+    // 実際に使うvalue1のデフォルト値
+    var effectiveValue1Default: Double {
+        defaultValue1 ?? inputType.value1Default
+    }
 
     static func == (lhs: TrainingMenuItem, rhs: TrainingMenuItem) -> Bool {
         lhs.name == rhs.name && lhs.inputType == rhs.inputType
@@ -206,11 +213,11 @@ struct TrainingMenuItem: Identifiable, Equatable {
                 TrainingMenuItem(name: "インクラインダンベルカール", inputType: .weightReps),
                 TrainingMenuItem(name: "サイドレイズ", inputType: .weightReps),
                 TrainingMenuItem(name: "トライセプスエクステンション", inputType: .weightReps),
-                TrainingMenuItem(name: "ケーブルプッシュダウン", inputType: .weightReps),
-                TrainingMenuItem(name: "ラットプルダウン", inputType: .weightReps),
-                TrainingMenuItem(name: "ショルダープレス", inputType: .weightReps),
-                TrainingMenuItem(name: "チェストプレス", inputType: .weightReps),
-                TrainingMenuItem(name: "アブドミナルクランチ", inputType: .weightReps),
+                TrainingMenuItem(name: "ケーブルプッシュダウン", inputType: .weightReps, defaultValue1: 30.0),
+                TrainingMenuItem(name: "ラットプルダウン", inputType: .weightReps, defaultValue1: 30.0),
+                TrainingMenuItem(name: "ショルダープレス", inputType: .weightReps, defaultValue1: 30.0),
+                TrainingMenuItem(name: "チェストプレス", inputType: .weightReps, defaultValue1: 30.0),
+                TrainingMenuItem(name: "アブドミナルクランチ", inputType: .weightReps, defaultValue1: 30.0),
                 TrainingMenuItem(name: "ベンチプレス", inputType: .weightReps),
                 TrainingMenuItem(name: "懸垂", inputType: .repsOnly),
                 TrainingMenuItem(name: "腕立て伏せ", inputType: .repsOnly),
@@ -218,10 +225,10 @@ struct TrainingMenuItem: Identifiable, Equatable {
         case .lowerBody:
             return [
                 TrainingMenuItem(name: "スクワット", inputType: .weightReps),
-                TrainingMenuItem(name: "レッグプレス", inputType: .weightReps),
-                TrainingMenuItem(name: "アングルドレッグプレス", inputType: .weightReps),
-                TrainingMenuItem(name: "レッグカール", inputType: .weightReps),
-                TrainingMenuItem(name: "レッグエクステンション", inputType: .weightReps),
+                TrainingMenuItem(name: "レッグプレス", inputType: .weightReps, defaultValue1: 30.0),
+                TrainingMenuItem(name: "アングルドレッグプレス", inputType: .weightReps, defaultValue1: 30.0),
+                TrainingMenuItem(name: "レッグカール", inputType: .weightReps, defaultValue1: 30.0),
+                TrainingMenuItem(name: "レッグエクステンション", inputType: .weightReps, defaultValue1: 30.0),
                 TrainingMenuItem(name: "カーフレイズ", inputType: .weightReps),
                 TrainingMenuItem(name: "ヒップスラスト", inputType: .weightReps),
                 TrainingMenuItem(name: "ランジ", inputType: .weightReps),

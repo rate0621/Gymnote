@@ -36,6 +36,12 @@ struct PersistenceController {
             record.value3 = value3
         }
 
+        // サンプルの日別メモ
+        let memo = DailyMemo(context: viewContext)
+        memo.id = UUID()
+        memo.date = Calendar.current.startOfDay(for: Date())
+        memo.memo = "調子が良かった。次回は重量を上げる。"
+
         // サンプルユーザープロフィール
         let profile = UserProfile(context: viewContext)
         profile.id = UUID()
